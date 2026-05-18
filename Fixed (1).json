@@ -1,0 +1,236 @@
+{
+  "name": "Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Pembuatan Invoice Otomatis",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "nama klien",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "jam kerja",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "email",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -32,
+        -32
+      ],
+      "id": "3118f92c-725b-4d12-98e2-80f66cc3bda3",
+      "name": "On form submission",
+      "webhookId": "d9d8dfe1-998a-4189-b530-2c84b6f55d9d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48755740-7cf5-4138-9e43-64f1cb228d26",
+              "name": "client_name",
+              "value": "={{ $json['nama klien'] }}",
+              "type": "string"
+            },
+            {
+              "id": "1575d507-9efb-4b27-9adf-a5bc0572b0b9",
+              "name": "hours",
+              "value": "={{ $json['jam kerja'] }}",
+              "type": "number"
+            },
+            {
+              "id": "9bbc8ad5-f706-4897-9561-6f77f602e533",
+              "name": "client_email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "rate_id",
+              "name": "rate",
+              "value": 150000,
+              "type": "number"
+            },
+            {
+              "id": "total_id",
+              "name": "total_cost",
+              "value": "={{ $json['jam kerja'] * 150000 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        -32
+      ],
+      "id": "40a90b87-af45-4526-adc8-3f9767b559d0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html lang=\"id\">\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: sans-serif; background: #f4f6f8; padding: 40px; }\n    .invoice-wrapper { max-width: 800px; margin: auto; background: #fff; padding: 40px; border-radius: 8px; }\n    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; }\n    .section { margin: 20px 0; }\n    table { width: 100%; border-collapse: collapse; }\n    th { background: #f9fafb; padding: 12px; text-align: left; border-bottom: 2px solid #eee; }\n    td { padding: 12px; border-bottom: 1px solid #eee; }\n    .total { text-align: right; font-weight: bold; font-size: 18px; margin-top: 20px; }\n  </style>\n</head>\n<body>\n  <div class=\"invoice-wrapper\">\n    <div class=\"header\">\n      <h1>INVOICE</h1>\n      <div>\n        <p>Tanggal: {{ $now.format('dd/MM/yyyy') }}</p>\n        <p>Jatuh Tempo: {{ $now.plus({ days: 25 }).format('dd/MM/yyyy') }}</p>\n        <p>No: INV-{{ $execution.id }}</p>\n      </div>\n    </div>\n\n    <div class=\"section\">\n      <strong>Ditagihkan Kepada:</strong>\n      <p>{{ $node[\"Edit Fields\"].json[\"client_name\"] }}</p>\n      <p>{{ $node[\"Edit Fields\"].json[\"client_email\"] }}</p>\n    </div>\n\n    <table>\n      <thead>\n        <tr>\n          <th>Deskripsi</th>\n          <th>Jam</th>\n          <th>Rate</th>\n          <th>Subtotal</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>Jasa Pekerjaan / Konsultasi</td>\n          <td>{{ $node[\"Edit Fields\"].json[\"hours\"] }}</td>\n          <td>Rp {{ $node[\"Edit Fields\"].json[\"rate\"].toLocaleString('id-ID') }}</td>\n          <td>Rp {{ $node[\"Edit Fields\"].json[\"total_cost\"].toLocaleString('id-ID') }}</td>\n        </tr>\n      </tbody>\n    </table>\n\n    <div class=\"total\">\n      Total Tagihan: Rp {{ $node[\"Edit Fields\"].json[\"total_cost\"].toLocaleString('id-ID') }}\n    </div>\n  </div>\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        -32
+      ],
+      "id": "95cbddeb-2891-452c-a276-fe48717b10f3",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}"
+      },
+      "type": "n8n-nodes-htmlcsstopdf.htmlcsstopdf",
+      "typeVersion": 1,
+      "position": [
+        640,
+        -32
+      ],
+      "id": "3a9863be-cfec-4943-b2ad-b741254adb4e",
+      "name": "Convert HTML to PDF",
+      "credentials": {
+        "htmlcsstopdfApi": {
+          "id": "js2hbgvSr2mcxvYh",
+          "name": "HTML to PDF account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $node[\"Edit Fields\"].json[\"client_email\"] }}",
+        "subject": "=Invoice Pekerjaan - {{ $node[\"Edit Fields\"].json[\"client_name\"] }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\">\n  <p>Yth. <strong>{{ $('Edit Fields').item.json[\"client_name\"] }}</strong>,</p>\n\n  <p>Terima kasih atas kepercayaan Anda menggunakan jasa kami. Bersama email ini, kami lampirkan invoice untuk pekerjaan yang telah diselesaikan.</p>\n\n  <p>Berikut adalah ringkasan singkat tagihan Anda:</p>\n  \n  <ul style=\"list-style-type: disc; padding-left: 20px;\">\n    <li><strong>Total Jam Kerja:</strong> {{ $('Edit Fields').item.json[\"hours\"] }} jam</li>\n    <li><strong>Total Tagihan:</strong> Rp {{ $('Edit Fields').item.json[\"total_cost\"].toLocaleString('id-ID') }}</li>\n    <li><strong>Jatuh Tempo:</strong> 14 hari</li>\n  </ul>\n\n  <p>Detail lengkap, termasuk rincian pekerjaan dan instruksi pembayaran, dapat Anda temukan pada file PDF yang terlampir:<br>\n  <a href=\"{{ $json.pdf_url }}\" style=\"color: #1a73e8; text-decoration: underline;\">Unduh Invoice PDF</a></p>\n\n  <blockquote style=\"border-left: 4px solid #ccc; padding: 10px 15px; margin: 20px 0; background-color: #f9f9f9; font-style: italic;\">\n    <strong>Catatan Keamanan:</strong> Untuk melindungi Anda, kami tidak akan pernah meminta informasi password atau data sensitif melalui email. Harap lakukan pembayaran hanya ke nomor rekening resmi yang tertera di dalam invoice PDF.\n  </blockquote>\n\n  <p>Jika ada pertanyaan lebih lanjut, jangan ragu untuk membalas email ini.</p>\n\n  <p>Hormat kami,</p>\n  \n  <p><strong>Muhammad S Hammami</strong><br>\n  Dr Hammami / 123456789</p>\n</div>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        -32
+      ],
+      "id": "3e562f31-b320-4202-aee9-2681ada02531",
+      "name": "Send Gmail",
+      "webhookId": "2d2a27d0-2460-4790-a009-ecdfd2a856a1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3fuMyWWzakbW4K0w",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.pdf_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        -32
+      ],
+      "id": "8b98ea21-fd7e-45b9-9331-b349c37af2f2",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML to PDF": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "54e73cde-2ad2-404f-8fd8-e5ce5132cbe1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1b47745a54fd123fa9b3161b62aa5a4a0101dc73f1c3adf8b490ec9bd0e96ea2"
+  },
+  "id": "IBy8xcp6hWWwoPAF",
+  "tags": []
+}
